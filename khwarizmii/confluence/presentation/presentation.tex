@@ -1,0 +1,796 @@
+% -*- mode: latex-mode; -*-
+
+\documentclass{beamer}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Dark Beamer Theme (Heavily Customized)                  %
+% Source: https://github.com/pblottiere/dark-beamer-theme %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usetheme{dbt}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TikZiT WYSIWYG Editor                    %
+% Source: https://tikzit.github.io/#custom %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{tikzit}
+\input{confluence.tikzstyles}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Source: https://tex.stackexchange.com/a/74127 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\usepackage{tcolorbox}
+
+\tcbset{%
+  colback=black!95,%
+  colupper=white,%
+  colframe=white!40!black,%
+  sharp corners%
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Deduction Rule Formatting %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{mathpartir}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Source: https://isabelle.in.tum.de/community/Generate_TeX_Snippets %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{generated/document/comment}%
+\usepackage{generated/document/isabelle}%
+\usepackage{generated/document/isabellesym}%
+\usepackage{generated/document/isabelletags}%
+\usepackage{ifthen}%
+
+\newcommand{\DefineSnippet}[2]{%
+  \expandafter\newcommand\csname snippet--#1\endcsname{ \kern-1ex #2
+    \kern-1.5ex }}
+
+\newcommand{\Snippet}[1]{%
+  \ifcsname snippet--#1\endcsname {\csname snippet--#1\endcsname}
+  \else +++++++ERROR: Snippet ``#1'' not defined+++++++ \fi}
+
+\input{generated/snippets}
+
+% https://www.cl.cam.ac.uk/research/hvg/Isabelle/dist/Isabelle2017/doc/sugar.pdf
+\usepackage{mathpartir}
+
+%%%%%%%%
+% Main %
+%%%%%%%%
+
+\title{Lambda-Calculus Confluence} \author{Matthew Doty} \date{}
+
+\begin{document}
+
+{\setbeamertemplate{footline}{} \frame{\titlepage}}
+
+
+\hypersetup{colorlinks=false}
+
+\section*{Outline}%
+
+\hypersetup{colorlinks}
+
+\begin{frame}[shrink=35]{\insertsectionhead}%
+  \ \
+  \tableofcontents %
+\end{frame}
+
+\sectionframe{Why Confluence?}
+
+\subsection{Stuck Macros}
+\begin{frame}[plain, allowframebreaks]{\insertsectionhead\ \textemdash\
+    \insertsubsectionhead}
+  \includegraphics[width=\linewidth]{figs/macro1.pdf}
+
+  \framebreak
+
+  \includegraphics[width=\linewidth]{figs/macro2.pdf}
+\end{frame}
+
+\subsection{Na\"ive Typed Macros Aren't Confluent}
+\begin{frame}[plain]{\insertsectionhead\ \textemdash\\
+    \insertsubsectionhead}
+  \begin{flushright}
+  \includegraphics[width=0.35\linewidth]{figs/macro4.pdf}
+  \end{flushright}
+
+  \includegraphics[width=\linewidth]{figs/macro3.pdf}
+\end{frame}
+
+\sectionframe{Untyped Lambda Calculus}
+
+\subsection{Syntax}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\ \textemdash\
+    \insertsubsectionhead}
+\begin{code}
+module LambdaCalc where
+import Prelude hiding (foldl, foldl')
+
+infixl 7 :.
+
+data Lam
+  = V Int
+  | Lam :. Lam
+  | Abs Int Lam
+  deriving Eq
+\end{code}
+
+  \framebreak
+    \begin{table}[htbp]
+      \begin{tabular}{ll}
+        Conventional & Haskell \\
+        \hline
+        & \\
+        $\lambda x.\ x$ & |Abs 1 (V 1)| \\
+        $\lambda z.\ z$ & |Abs 2 (V 2)| \\
+        $\lambda x. \lambda y.\ x$ & |Abs 1 (Abs 2 (V 1))| \\
+        $(\lambda x. \lambda x.\ x)\ (\lambda y.\ y)$ & |Abs 1 (Abs 1 (V 1)) :. Abs 2 (V 2)|
+      \end{tabular}
+    \end{table}
+
+
+\end{frame}
+
+\subsection{Variable Capture}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\ \textemdash\
+    \insertsubsectionhead}
+\begin{code}
+freeVars :: Lam -> [Int]
+
+freeVars (V x) = [x]
+
+freeVars (lam1 :. lam2) =
+  freeVars lam1 <> freeVars lam2
+
+freeVars (Abs x lam) =
+  [y | y <- freeVars lam, y /= x]
+\end{code}
+
+  \framebreak
+
+\begin{code}
+freshVar :: Lam -> Int
+
+freshVar lam = 1 + foldr max 0 (freeVars lam)
+\end{code}
+\end{frame}
+
+\subsection{Substitution}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\ \textemdash\
+    \insertsubsectionhead}
+
+A single variable substitution:
+
+\begin{code}
+infix 6 :=
+
+data Subst = Int := Lam
+\end{code}~\\
+
+Substitution operation:
+
+\begin{code}
+infixl 5 !
+
+(!) :: Lam -> Subst -> Lam
+\end{code}
+
+\framebreak
+
+Conventional \LaTeX
+  \[
+    s\; [x\ :=\ t]
+  \]
+
+  Our Haskell Implementation
+  \begin{center}
+  |s ! x := t|
+  \end{center}
+
+\framebreak
+
+\begin{code}
+V y ! x := t
+  | x == y = t
+  | otherwise = V y
+\end{code}
+
+\framebreak
+
+\begin{code}
+lam1 :. lam2 ! x := t =
+  (lam1 ! x := t) :. (lam2 ! x := t)
+\end{code}
+
+\framebreak
+
+\begin{code}
+s@(Abs y lam) ! x := t
+  | x == y = Abs y lam
+  | x /= y && not (y `elem` freeVars t) =
+    Abs y (lam ! x := t)
+  | otherwise =
+    Abs z (lam ! y := V z ! x := t)
+  where
+    z = freshVar (s :. t :. V x)
+\end{code}
+\end{frame}
+
+\subsection{Beta Rule}
+\begin{frame}[fragile]{\insertsectionhead\ \textemdash\
+    \insertsubsectionhead}
+
+Conventional \LaTeX
+  \[
+    (\lambda x.\, s)\; t\ \to_\beta\ s\; [x\ :=\ t]
+  \]~\\
+  Haskell implementation
+  \begin{center}
+     |(Abs x s) :. t| $\ \to_\beta\ $ |s ! x := t|
+  \end{center}
+\end{frame}
+
+\subsection{Evaluation Strategies}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\ \textemdash\
+    \insertsubsectionhead}
+\begin{code}
+normEval :: Lam -> Lam
+
+normEval ((Abs x s) :. t) =
+  normEval (s ! x := t)
+
+---
+normEval (V x) = V x
+
+normEval (s :. t) =
+  (normEval s) :. (normEval t)
+
+normEval (Abs x s) = Abs x (normEval s)
+\end{code}
+
+\framebreak
+
+\begin{code}
+callByVal :: Lam -> Lam
+
+-- normEval ((Abs x s) :. t) =
+--   normEval (s ! x := t)
+
+callByVal ((Abs x s) :. t) =
+  callByVal (s ! x := callByVal t)
+
+---
+callByVal (V x) = V x
+
+callByVal (s :. t) =
+  (callByVal s) :. (callByVal t)
+
+callByVal (Abs x s) = Abs x (callByVal s)
+\end{code}
+
+\framebreak
+
+\begin{code}
+appEval :: Lam -> Lam
+
+-- callByVal ((Abs x s) :. t) =
+--   callByVal (s ! x := callByVal t)
+
+appEval ((Abs x s) :. t) =
+  appEval (appEval s ! x := t)
+
+---
+appEval (V x) = V x
+
+appEval (s :. t) =
+  (appEval s) :. (appEval t)
+
+appEval (Abs x s) = Abs x (appEval s)
+\end{code}
+
+\framebreak
+
+\begin{code}
+lazyEval :: Lam -> Lam
+
+-- normEval (Abs x s) = Abs x (normEval s)
+lazyEval (Abs x s) = Abs x s
+
+---
+lazyEval ((Abs x s) :. t) =
+  lazyEval (s ! x := t)
+
+lazyEval (V x) = V x
+
+lazyEval (s :. t) =
+  (lazyEval s) :. (lazyEval t)
+\end{code}
+
+\end{frame}
+
+\subsection{Digression: Weak Head Normal Form}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\ \textemdash\\
+    \insertsubsectionhead}
+
+\begin{code}
+weakHeadNF :: Lam -> Bool
+
+weakHeadNF (V _) = True
+
+weakHeadNF ((Abs _ _) :. _) = False
+
+weakHeadNF (s :. t) =
+  weakHeadNF s && weakHeadNF t
+
+weakHeadNF (Abs _ _) = True
+\end{code}
+
+\framebreak
+
+\begin{claim}
+\begin{center}
+  if \\~\\
+  |weakHeadNF x| \\~\\
+  then \\~\\
+  |lazyEval x == x|
+\end{center}
+\end{claim}
+
+\framebreak
+
+\begin{code}
+foldl :: (a -> b -> a) -> a -> [b] -> a
+foldl _f a [] = a
+foldl f a (x:xs) = foldl f (f a x) xs
+\end{code}
+
+\framebreak
+
+\begin{lstlisting}
+foldl (+) 0 [1, 2, 3, 4]
+  = foldl (0 + 1) [2, 3, 4]
+  = foldl ((0 + 1) + 2) [3, 4]
+  = foldl (((0 + 1) + 2) + 3) [4]
+  = foldl ((((0 + 1) + 2) + 3) + 4) []
+  = ((((0 + 1) + 2) + 3) + 4)
+  = (((1 + 2) + 3) + 4)
+  = ((3 + 3) + 4)
+  = 6 + 4
+  = 10
+\end{lstlisting}
+
+\framebreak
+
+Haskell has a special primitive |seq :: a -> b -> b| \\~\\
+
+When Haskell tries to evaluate
+
+\begin{center}
+  |x `seq` y|
+\end{center}
+
+Haskell will first evaluate |x| to weak head normal form, and then
+evaluate |y| to weak head normal form
+
+\framebreak
+
+\begin{code}
+foldl' :: (a -> b -> a) -> a -> [b] -> a
+foldl' f a [] = a
+foldl' f a (x : xs) =
+  let a' = f a x
+   in a' `seq` foldl' f a' xs
+\end{code}
+
+\framebreak
+
+\begin{lstlisting}
+foldl' (+) 0 [1, 2, 3, 4]
+  = foldl' (+) 0 [1, 2, 3, 4]
+  = let a' = 0 + 1
+    in a' `seq` foldl' (+) a' [2, 3, 4]
+  = 1 `seq` foldl' (+) 1 [2, 3, 4]
+  = foldl' (+) 1 [2, 3, 4]
+\end{lstlisting}
+
+\framebreak
+
+\begin{lstlisting}
+foldl' (+) 0 [1, 2, 3, 4]
+  = foldl' (+) 1 [2, 3, 4]
+  = foldl' (+) 3 [3, 4]
+  = foldl' (+) 6 [4]
+  = foldl' (+) 10 []
+  = 10
+\end{lstlisting}
+
+\end{frame}
+
+\subsection{Normal Form}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\ \textemdash\\
+    \insertsubsectionhead}
+
+\begin{code}
+nf :: Lam -> Bool
+
+-- weakHeadNF (Abs _ _) = True
+nf (Abs _ s) = nf s
+
+---
+nf (V _) = True
+
+nf ((Abs _ _) :. _) = False
+
+nf (s :. t) = nf s && nf t
+\end{code}
+
+\framebreak
+\begin{claim}
+  If |nf x| then
+  \begin{itemize}
+    \item |normEval x == x|
+    \item |callByVal x == x|
+    \item |appEval x == x|
+  \end{itemize}
+\end{claim}
+\end{frame}
+
+\sectionframe{Church's Arithmetic}
+
+\begin{subsectionframe}{Church Numerals}{plain}
+  \begin{table}
+    \begin{tabular}{ll}
+      Number & Church Numeral \\
+      \hline
+      & \\
+      0 & $\lambda f. \lambda x.\ x$ \\
+      1 & $\lambda f. \lambda x.\ f\ x$ \\
+      2 & $\lambda f. \lambda x.\ f\ (f\ x)$ \\
+      3 & $\lambda f. \lambda x.\ f\ (f\ (f\ x))$ \\
+      \vdots & \vdots \\
+      n & $\lambda f. \lambda x.\ f^{\; \circ n}\ x$
+    \end{tabular}
+  \end{table}
+\end{subsectionframe}
+
+\begin{subsectionframe}{Arithmetical Operations}{plain, allowframebreaks}
+  \begin{eqnarray*}
+    (+) & \equiv & \lambda m. \lambda n. \lambda f. \lambda x.\ m\ f\ (n\ f\ x)
+  \end{eqnarray*}
+  \ldots since $f^{\; \circ (m + n)} x = f^{\; \circ m}\ (f^{\; \circ n}\ x)$
+  \framebreak
+  \begin{eqnarray*}
+    succ & \equiv & \lambda n. \lambda f. \lambda x.\ f\ (n\ f\ x) \\
+         & \approx_\beta &  (+ 1)
+  \end{eqnarray*}
+  \framebreak
+  \begin{eqnarray*}
+    (\ast) & \equiv & \lambda m. \lambda n. \lambda f. \lambda x.\ m\ (n\ f)\ x\\
+  \end{eqnarray*}
+  \ldots since $f^{\; \circ (m * n)}\ x = (f^{\; \circ n})^{\circ m}\ x$
+\end{subsectionframe}
+
+\begin{subsectionframe}{Is Church's Arithmetic Consistent?}{plain}
+  \emph{Can we make an arithmetical expression $e$ which evaluates to $1$ using one strategy, but $2$ using some other strategy?}
+  \\~\\
+  (kind of a ``philosophy of math'' version of Sam G's problem)
+\end{subsectionframe}
+
+\sectionframe{Formalization: de Bruijn Notation}
+
+\begin{subsectionframe}{Syntax}{plain, allowframebreaks}
+  \begin{table}
+    \begin{tabular}{ll}
+      Conventional & de Bruijn \\
+      \hline
+      & \\
+      $\lambda x.\ x$ & $\mathbf{\lambda}\ 0$ \\
+      $\lambda z.\ z$ & $\mathbf{\lambda}\ 0$ \\
+      $\lambda x. \lambda y.\ x$ & $\mathbf{\lambda} \mathbf{\lambda}\ 1$\\
+      $(\lambda x. \lambda x.\ x)\ (\lambda y.\ y)$ & $(\lambda \lambda\ 0)\ (\lambda\ 0)$\\~\\
+      $(\lambda x.\ x\ x)\ (\lambda x.\ x\ x)$ & $ (\lambda \lambda\ 0\ 0)\ (\lambda \lambda\ 0\ 0)$ \\
+      $\lambda x. \lambda y. \lambda s. \lambda z.\ x\ s\ (y\ s\ z)$ & $\mathbf{\lambda} \mathbf{\lambda} \mathbf{\lambda} \mathbf{\lambda}\ 3\ 1\ (2\ 1\ 0)$ \\
+    \end{tabular}
+  \end{table}
+  \framebreak
+  \begin{table}
+    \begin{tabular}{lll}
+      Number & Church Numeral & de Bruijn \\
+      \hline
+      & & \\
+      0 & $\lambda f. \lambda x.\ x$ & $\mathbf{\lambda} \mathbf{\lambda}\ 0$ \\
+      1 & $\lambda f. \lambda x.\ f\ x$ & $\mathbf{\lambda} \mathbf{\lambda}\ 1\ 0$ \\
+      2 & $\lambda f. \lambda x.\ f\ (f\ x)$ & $\mathbf{\lambda} \mathbf{\lambda}\ 1\ (1\ 0)$ \\
+      3 & $\lambda f. \lambda x.\ f\ (f\ (f\ x))$ & $\mathbf{\lambda} \mathbf{\lambda}\ 1\ (1\ (1\ 0))$ \\
+    \end{tabular}
+  \end{table}
+  \framebreak
+  \Snippet{db_Syntax}
+\end{subsectionframe}
+
+\begin{subsectionframe}{Lifting}{plain}
+  \Snippet{lifting_def}
+\end{subsectionframe}
+
+\begin{subsectionframe}{Substitution}{plain}
+  \Snippet{substitution_def}
+\end{subsectionframe}
+
+\subsection{Beta Reduction}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\ \textemdash\
+    \insertsubsectionhead}
+  \begin{center}
+  \Snippet{beta_beta}
+  \end{center}
+
+  ~\\~\\
+
+  \hspace*{\fill}
+  \Snippet{beta_appL}
+  \hfill
+  \Snippet{beta_appR}
+  \hspace*{\fill}
+
+  ~\\~\\
+
+  \begin{center}
+  \Snippet{beta_abs}
+\end{center}
+
+\framebreak
+
+$\beta$-rule in Isabelle/HOL
+
+  \begin{center}
+\Snippet{beta_beta_no_rule}
+  \end{center}
+
+$\beta$-rule for the Haskell implementation
+
+  \begin{center}
+     |(Abs x s) :. t| $\ \to_\beta\ $ |s ! x := t|
+  \end{center}
+
+\end{frame}
+
+
+\subsection{Beta equivalence}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\ \textemdash\
+    \insertsubsectionhead}
+
+  \hspace*{\fill}
+  \Snippet{beta_equiv_refl}
+  \hfill
+  \Snippet{beta_equiv_subst}
+  \hspace*{\fill}
+
+  ~\\~\\
+
+  \hspace*{\fill}
+  \Snippet{beta_equiv_abs}
+  \hfill
+  \Snippet{beta_equiv_symm}
+  \hspace*{\fill}
+
+  ~\\~\\
+
+  \begin{center}
+  \Snippet{beta_equiv_app}
+\end{center}
+
+\framebreak
+
+\begin{lemma}
+  \begin{center}
+  \Snippet{beta_equiv_alt_def}
+  \end{center}
+\end{lemma}
+
+\framebreak
+
+Chains of reductions like this:
+  \begin{center}
+    \tikzfig{figs/transitive_reduction}
+  \end{center}
+
+  \framebreak
+
+Can be drawn like this:
+
+  \begin{center}
+    \tikzfig{figs/transitive_reduction2}
+  \end{center}
+
+  \vspace{-50pt} \ldots and are represented symbolically with $\to^\ast$\\~\\
+
+\framebreak
+\begin{center}
+  \Snippet{beta_equiv}
+~\\~\\
+\begin{center}
+  is graphically depicted by
+\end{center}
+~\\~\\
+\tikzfig{figs/church-rosser}
+\end{center}
+
+\end{frame}
+
+\begin{subsectionframe}{Consistency Redux}{plain}
+  Stronger consistency challenge:\\~\\
+  \begin{center}
+    Can we show $1 \not\approx_\beta 2$?
+  \end{center}
+\end{subsectionframe}
+
+\sectionframe{Abstract Confluence}
+
+\subsection{Definition of Confluence}
+\begin{frame}[fragile]{\insertsectionhead\
+    \textemdash\ \insertsubsectionhead}
+A relation $\to$ is \emph{confluent} when for all $x$, $y$ and $z$ where
+$x \to^\ast y$ and $x \to^\ast z$, there exists a (not necessarily
+unique) $p$ where $y \to^\ast p$ and $z \to^\ast p$
+
+  \begin{center}
+      \tikzfig{figs/confluence}
+  \end{center}
+\end{frame}
+
+\subsection{The Church-Rosser Property}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\
+    \textemdash\ \insertsubsectionhead}
+  Define the predicate
+  \begin{center}
+    \Snippet{Church_Rosser_def_lhs}
+  \end{center}
+  to mean
+  \begin{center}
+        \Snippet{Church_Rosser_def_rhs}
+  \end{center}
+  \framebreak
+  \begin{center}
+    \tikzfig{figs/church-rosser}~\\~\\
+    if and only if\\~\\
+    \tikzfig{figs/church-rosser-2}
+  \end{center}
+\end{frame}
+
+\subsection{Alternate Definition of Confluence}
+\begin{frame}[plain]{\insertsectionhead\
+    \textemdash\ \insertsubsectionhead}
+  \begin{theorem}
+    \begin{center}
+      \Snippet{Church_Rosser_confluent}
+    \end{center}
+    A relation $R$ is confluent if and only if $R$ has the \emph{Church-Rosser} property.
+  \end{theorem}
+\end{frame}
+
+\subsection{Diamond Property}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\
+    \textemdash\ \insertsubsectionhead}
+  A relation $\to$ has \emph{the diamond property} if for all $x$, $y$, and $z$ if $x \to y$ and $x \to z$ then there is a (not necessarily unique) $p$ such that $y \to p$ and $z \to p$
+
+\framebreak
+
+  \begin{center}
+      \tikzfig{figs/diamond}
+  \end{center}
+
+\framebreak
+
+\begin{lemma}
+  \begin{center}
+  \Snippet{confluent_diamond}
+  \end{center}
+\end{lemma}
+
+\framebreak
+
+\begin{theorem}
+  \begin{center}
+  \Snippet{diamond_confluent}
+  \end{center}
+\end{theorem}
+
+\framebreak
+
+\begin{claim}
+  The untyped $\lambda$-calculus does not have the diamond property
+  \end{claim}
+
+  To see this, consider:
+  \[
+  (\lambda y.\ u\ y\ y)\ ((\lambda x.\ x)\ z)
+  \]
+
+\end{frame}
+
+
+\sectionframe{Confluence of Beta-Reduction}
+
+\subsection{Parallel Reduction}
+\begin{frame}[fragile]{\insertsectionhead\
+    \textemdash\ \insertsubsectionhead}
+  Attributed to William Tait and Per Martin L\"of \cite{takahashiParallelReductionsLCalculus1995} \\~\\
+
+  \begin{center}
+  \Snippet{par_beta_var}
+  \end{center}
+
+  ~\\~\\
+
+  \hspace*{\fill}
+  \Snippet{par_beta_abs}
+  \hfill
+  \Snippet{par_beta_app}
+  \hspace*{\fill}
+
+  ~\\~\\
+
+  \begin{center}
+  \Snippet{par_beta_beta}
+  \end{center}
+
+
+\end{frame}
+
+\subsection{Squeeze Theorems}
+\begin{frame}[plain]{\insertsectionhead\
+    \textemdash\ \insertsubsectionhead}
+  \begin{center}
+      \Snippet{beta_implies_par_beta}
+  \end{center}
+~\\
+  \begin{center}
+    \Snippet{par_beta_implies_transitive_beta}
+  \end{center}
+\end{frame}
+
+\subsection{Confluence}
+\begin{frame}[fragile, allowframebreaks]{\insertsectionhead\
+    \textemdash\ \insertsubsectionhead}
+  \begin{lemma}
+    \begin{center}
+      \Snippet{diamond_par_beta}
+    \end{center}
+  \end{lemma}
+  ~\\
+  \begin{lemma}
+    \begin{center}
+      \Snippet{par_beta_confluent}
+    \end{center}
+  \end{lemma}
+  \framebreak
+  \begin{theorem}
+    \begin{center}
+      \Snippet{beta_confluent}
+    \end{center}
+  \end{theorem}
+  \framebreak
+  \begin{claim}
+    \[ 1 \not\approx_\beta 2 \]
+  \end{claim}
+\end{frame}
+
+
+\section{Bibliography}
+\begin{frame}{\insertsectionhead}
+  \setbeamerfont{bibliography item}{size=\tiny}
+  \setbeamerfont{bibliography entry author}{size=\tiny}
+  \setbeamerfont{bibliography entry title}{size=\tiny}
+  \setbeamerfont{bibliography entry location}{size=\tiny}
+  \setbeamerfont{bibliography entry note}{size=\tiny}
+  \bibliographystyle{siam}%
+  \bibliography{bibliography}
+\end{frame}
+
+\end{document}

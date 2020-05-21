@@ -1,0 +1,9 @@
+\begin{tikzpicture}
+	\begin{pgfonlayer}{nodelayer}
+		\node [style=none] (0) at (-1.5, 8.5) {$a$};
+		\node [style=none] (4) at (3, 4) {$z$};
+	\end{pgfonlayer}
+	\begin{pgfonlayer}{edgelayer}
+		\draw [style=transitive edge] (0.center) to (4.center);
+	\end{pgfonlayer}
+\end{tikzpicture}

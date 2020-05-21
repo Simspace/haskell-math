@@ -1,0 +1,21 @@
+\begin{tikzpicture}
+	\begin{pgfonlayer}{nodelayer}
+		\node [style=none] (0) at (-6, 0) {$p$};
+		\node [style=none] (1) at (-4, 2) {$\exists a$};
+		\node [style=none] (2) at (-2, 0) {$\exists b$};
+		\node [style=none] (3) at (0, 2) {};
+		\node [style=none] (4) at (3, 0) {$\exists y$};
+		\node [style=none] (5) at (5, 2) {$\exists z$};
+		\node [style=none] (7) at (7, 0) {$q$};
+		\node [style=none] (8) at (1, 2) {};
+	\end{pgfonlayer}
+	\begin{pgfonlayer}{edgelayer}
+		\draw [style=transitive edge] (1.center) to (0.center);
+		\draw [style=transitive edge] (1.center) to (2.center);
+		\draw [style=transitive edge] (5.center) to (4.center);
+		\draw [style=transitive edge] (5.center) to (7.center);
+		\draw [style=dotted edge] (8.center) to (3.center);
+		\draw [style=transitive edge] (3.center) to (2.center);
+		\draw [style=transitive edge] (8.center) to (4.center);
+	\end{pgfonlayer}
+\end{tikzpicture}

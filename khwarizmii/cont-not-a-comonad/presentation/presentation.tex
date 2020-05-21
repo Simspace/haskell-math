@@ -165,7 +165,7 @@
 \subsection{Definition}
 \begin{frame}[fragile]{\insertsectionhead\ \textemdash\
     \insertsubsectionhead}
-  \begin{lstlisting}
+  \begin{code}
 newtype Cont r a
   = Cont {runCont :: (a -> r) -> r}
 
@@ -175,7 +175,7 @@ instance Monad (Cont r) where
     Cont $ \c ->
       runCont s $ \x ->
         runCont (f x) c
-  \end{lstlisting}
+  \end{code}
 \end{frame}
 
 \subsection{Example Usage}
