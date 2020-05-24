@@ -1,0 +1,14 @@
+\begin{tikzpicture}
+	\begin{pgfonlayer}{nodelayer}
+		\node [style=none] (0) at (0, 3) {$x$};
+		\node [style=none] (1) at (-3, 0) {$y$};
+		\node [style=none] (2) at (0, -3) {$\exists p$};
+		\node [style=none] (3) at (3, 0) {$z$};
+	\end{pgfonlayer}
+	\begin{pgfonlayer}{edgelayer}
+		\draw [style=transitive edge] (0.center) to (3.center);
+		\draw [style=transitive edge] (0.center) to (1.center);
+		\draw [style=transitive edge] (1.center) to (2.center);
+		\draw [style=transitive edge] (3.center) to (2.center);
+	\end{pgfonlayer}
+\end{tikzpicture}
